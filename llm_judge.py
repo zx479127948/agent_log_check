@@ -1,6 +1,7 @@
 """LLM-based risk judgment via claude -p."""
 
 import json
+import shutil
 import subprocess
 import sys
 
@@ -56,20 +57,28 @@ def judge(
         baseline_log_path, upgraded_log_path,
     )
 
+    # On Windows, resolve the full path to claude.cmd
+    claude_cmd = "claude"
+    if sys.platform == "win32":
+        claude_cmd = shutil.which("claude") or "claude"
+
     try:
+        # Use stdin to pass the prompt to avoid command line length limits
+        # Use bytes mode to avoid Windows GBK encoding issues with Chinese text
         result = subprocess.run(
-            ["claude", "-p", prompt, "--output-format", "json",
+            [claude_cmd, "-p", "--output-format", "json",
              "--dangerously-skip-permissions"],
+            input=prompt.encode("utf-8"),
             capture_output=True,
-            text=True,
             timeout=120,
         )
         if result.returncode != 0:
-            print(f"claude -p failed: {result.stderr}", file=sys.stderr)
+            stderr_text = result.stderr.decode("utf-8", errors="replace")
+            print(f"claude -p failed: {stderr_text}", file=sys.stderr)
             return None
 
-        # The --output-format json wraps the result in a JSON envelope
-        raw = result.stdout.strip()
+        # Decode stdout as UTF-8
+        raw = result.stdout.decode("utf-8", errors="replace").strip()
         try:
             envelope = json.loads(raw)
             # Extract the text content from the envelope
