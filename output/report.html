@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent日志质量对比报告</title>
+<style>
+:root { --primary: #1a73e8; --bg: #f8f9fa; --card-bg: #ffffff; --text: #202124; --text-secondary: #5f6368; --border: #dadce0; --success: #1e8e3e; --warning: #f9ab00; --danger: #d93025; }
+* { box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", "Segoe UI", -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 24px; background: var(--bg); color: var(--text); line-height: 1.6; }
+h1 { color: var(--primary); font-size: 28px; margin-bottom: 4px; }
+h2 { color: #202124; font-size: 20px; margin-top: 0; }
+h3 { color: var(--text-secondary); font-size: 16px; margin: 16px 0 8px; }
+h4 { color: var(--text-secondary); font-size: 14px; margin: 12px 0 6px; }
+.card { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 14px; }
+th, td { border: 1px solid var(--border); padding: 10px 14px; text-align: left; }
+th { background: #f1f3f4; color: var(--text); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.02em; }
+tr:hover { background: #f8f9fa; }
+.metric-name { font-weight: 500; white-space: nowrap; }
+.val { font-variant-numeric: tabular-nums; text-align: right; }
+.better { color: var(--success); font-weight: 600; }
+.worse { color: var(--danger); font-weight: 600; }
+.neutral { color: var(--text-secondary); }
+.risk-badge { display: inline-block; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 6px; }
+.overview { background: var(--card-bg); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid var(--primary); }
+.overview p { margin: 4px 0; color: var(--text-secondary); }
+.overview strong { color: var(--text); }
+.summary-card { background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%); border-radius: 16px; padding: 24px 28px; margin: 16px 0; box-shadow: 0 2px 8px rgba(26,115,232,0.1); }
+.summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.summary-header h2 { margin: 0; }
+.risk-overview { display: flex; align-items: center; gap: 8px; }
+.risk-label { color: var(--text-secondary); font-size: 14px; }
+.summary-text { background: white; border-radius: 8px; padding: 16px; margin: 12px 0; line-height: 1.8; }
+.summary-text p { margin: 6px 0; }
+.summary-text h2, .summary-text h3, .summary-text h4 { margin-top: 8px; }
+.action-badge { display: inline-block; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 6px; }
+.analysis-card { border-left: 4px solid var(--primary); }
+.analysis-card table { margin: 12px 0; }
+.meta { color: var(--text-secondary); font-size: 13px; margin-bottom: 12px; }
+.sub-summary { background: #f0f4ff; border-radius: 8px; padding: 12px 16px; margin: 8px 0 12px; line-height: 1.7; font-size: 14px; }
+.suggestions { padding-left: 20px; }
+.suggestions li { margin: 6px 0; line-height: 1.6; }
+.error { color: var(--danger); font-style: italic; }
+.timestamp { color: var(--text-secondary); font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Agent日志质量对比报告</h1>
+<p class="timestamp">生成时间: 2026-05-06 20:00:25</p>
+
+<div class="overview">
+<h2>概览</h2>
+<p><strong>Baseline:</strong> sample/log/log_glm5.1_20260505</p>
+<p><strong>Upgraded:</strong> sample/log/log_minimax2.7_20260505</p>
+</div>
+
+<div class="summary-card">
+<div class="summary-header">
+<h2>分析总结</h2>
+<div class="risk-overview">
+<span class="risk-label">整体风险</span> <span class="risk-badge" style="background:#f39c12">中</span>
+<span class="action-badge" style="background:#f39c12">需要更多测试</span>
+</div>
+</div>
+<div class="summary-text"><p>MiniMax2.7 相较 GLM5.1 在执行效率上有显著提升，会话时长缩短56.5%、每秒输出Token数提升204%，内容质量指标（模糊词汇-70%、重复句子-50%）全面改善。然而核心退化信号不容忽视：主Agent工具调用失败率从5.88%飙升至18.18%（+209%），且全部5个子Agent均由零错误转为有错误状态，表明工具调用的稳定性存在系统性退化。此外，子Agent #2输入Token暴增2498%、子Agent #5输入Token增加388%，呈现严重的上下文膨胀风险，虽被主Agent的Token下降所掩盖，但在更复杂任务场景下可能引发成本失控。</p></div>
+</div>
+
+<div class="card">
+<h2>主Agent指标对比</h2>
+<div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>3080863</td><td class='val'>1342138</td><td class="better">-56.4%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 主Agent输入Token大幅下降，上下文利用率显著提升，但需注意子Agent层面存在反向膨胀（#2 +2498%、#5 +388%），主Agent的下降可能主要源于任务分配策略变化而非真正的效率优化</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>28593</td><td class='val'>37811</td><td class="worse">+32.2%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 输出Token增加约三分之一，结合步骤数减少，说明单步输出密度提高。适度增加可接受，但若持续增长可能反映回答冗余化倾向</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>940.1</td><td class='val'>409.0</td><td class="better">-56.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 效率大幅提升，与每秒Token产出率提升吻合，任务完成速度显著加快</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>30.42</td><td class='val'>92.44</td><td class="better">+203.9%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 推理速度提升3倍，是本次升级最显著的正面指标，有利于提升用户交互体验和降低等待成本</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>40</td><td class='val'>34</td><td class="better">-15.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 步骤数略有减少，表明任务规划更加精简，未出现步骤冗余或循环退化迹象</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>17</td><td class='val'>11</td><td class="better">-35.3%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 主Agent调用次数减少，与子Agent数量不变一致，说明调度策略未变但单次调用效率提升</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>1</td><td class='val'>2</td><td class="worse">+100.0%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 失败绝对次数翻倍，虽然基数较小，但结合失败率上升形成明确退化信号</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0.0588</td><td class='val'>0.1818</td><td class="worse">+209.2%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 失败率从5.88%飙升至18.18%，是本次升级最严重的退化指标。接近五分之一的工具调用失败将直接影响任务完成可靠性，需排查是否为新模型工具调用格式或参数生成偏差所致</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>5</td><td class='val'>5</td><td class="neutral">+0.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 子Agent调度数量不变，任务分解策略稳定</td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>10</td><td class='val'>13</td><td class="better">+30.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考频次略增，说明模型在更多步骤触发了深度推理，对复杂任务的处理态度更积极</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>6221</td><td class='val'>5198</td><td class="worse">-16.4%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 总思考量下降，虽然次数增加，但单次思考深度变浅。结合平均字符数下降，存在推理深度不足的风险</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>622.1</td><td class='val'>399.8</td><td class="worse">-35.7%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 单次思考深度下降超过三分之一，是值得关注的退化信号。更短的平均思考可能意味着模型在关键决策节点的推理充分性降低，可能导致工具调用失败率上升等连锁问题</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>10</td><td class='val'>3</td><td class="better">-70.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 模糊词汇大幅减少，输出确定性显著增强，是明确的正向改进</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>18</td><td class='val'>9</td><td class="better">-50.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复句子减半，说明循环冗余问题得到改善，输出连贯性和信息密度提升</td></tr>
+</table>
+</div>
+</div>
+
+<h2 style="margin-top:24px;padding-left:8px;">子Agent指标对比</h2>
+<div class="card"><h2>子Agent #1</h2><p class="meta">Baseline: Terms &amp; Obligations subagent | Upgraded: Legal risk assessment agent</p><div class="sub-summary"><p>输入Token大幅下降64.6%，效率显著提升；Think深度增加（总字符+344%），内容质量归零（模糊词汇和重复句子均降至0），但首次出现工具调用失败（0→1），需关注失败率趋势。</p></div><div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>854244</td><td class='val'>302891</td><td class="better">-64.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 上下文利用率大幅提升，信息提取更精准</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>7957</td><td class='val'>6014</td><td class="better">-24.4%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 输出略减，与输入下降一致，未出现输出冗余</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>318.7</td><td class='val'>129.2</td><td class="better">-59.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 执行时间缩短近六成，效率显著提升</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>24.96</td><td class='val'>46.55</td><td class="better">+86.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 推理速度接近翻倍，与主Agent趋势一致</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>23</td><td class='val'>31</td><td class="worse">+34.8%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 步骤数增加但输入Token反降，说明单步上下文更轻量，但步骤增多可能反映任务规划粒度变细或存在试探性调用</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>16</td><td class='val'>18</td><td class="worse">+12.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 调用次数略增，与步骤数增加趋势一致，新增Grep工具使用（6次）拓宽了检索手段</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>0</td><td class='val'>1</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 从零失败到出现失败，虽绝对值低但打破了Baseline的完美记录</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0.0</td><td class='val'>0.0556</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 失败率5.56%处于可接受范围，但方向性退化需持续监控</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td> </td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>4</td><td class='val'>8</td><td class="better">+100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考频次翻倍，推理参与度提升</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>872</td><td class='val'>3871</td><td class="better">+343.9%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考总量大幅增长，推理深度显著增强，是该子Agent的正面亮点</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>218.0</td><td class='val'>483.9</td><td class="better">+122.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 单次思考深度翻倍以上，与主Agent的下降趋势相反，表明该子Agent在深度推理上有改进</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>2</td><td class='val'>0</td><td class="better">-100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 模糊词汇完全消除，输出确定性最优</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>3</td><td class='val'>0</td><td class="better">-100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复问题完全消除，内容质量大幅提升</td></tr>
+</table>
+</div></div><div class="card"><h2>子Agent #2</h2><p class="meta">Baseline: Clause Analysis subagent | Upgraded: Legal clauses analysis agent</p><div class="sub-summary"><p>输入Token暴增2498%（20,786→539,821），从几乎无工具调用变为16次调用且含2次失败，步骤数从2暴增至28，呈现严重的上下文膨胀和执行策略漂移，是本次升级中退化最严重的子Agent。</p></div><div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>20786</td><td class='val'>539821</td><td class="worse">+2497.0%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 输入Token暴增近25倍，属于极端异常。可能原因是模型读取了大量无关文件或陷入了信息过载循环，在批量任务场景下将导致成本失控</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>3466</td><td class='val'>6215</td><td class="worse">+79.3%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 输出增长尚在合理范围，与输入暴增不成比例，说明模型确实处理了更多上下文而非单纯生成更多内容</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>110.1</td><td class='val'>152.1</td><td class="worse">+38.1%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 时长增长温和，说明模型处理速度提升对冲了任务复杂度增加</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>31.47</td><td class='val'>40.85</td><td class="better">+29.8%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 速度提升，与整体趋势一致</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>2</td><td class='val'>28</td><td class="worse">+1300.0%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 步骤数暴增13倍，从极简执行变为复杂多步流程，与工具调用从0增至16次一致，表明该子Agent的策略发生了根本性变化——从直接回答转为大量工具探索，可能存在过度搜索的倾向</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>0</td><td class='val'>16</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#e74c3c">高</span> Baseline无工具调用直接完成任务，Upgraded却进行了16次工具调用（含Glob、Bash、Read、Grep），策略从&quot;已知即答&quot;变为&quot;全面搜索&quot;，效率严重退化</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>0</td><td class='val'>2</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 新增2次失败，失败率12.5%为所有子Agent中最高，与过度调用策略直接相关</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0</td><td class='val'>0.125</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 12.5%的失败率表明该子Agent在工具使用上存在显著不稳定性</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td> </td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>1</td><td class='val'>10</td><td class="better">+900.0%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 思考次数大幅增加，与步骤暴增一致，但未能有效遏制错误率上升</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>438</td><td class='val'>4555</td><td class="better">+940.0%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 思考总量暴增，但未能转化为更可靠的执行结果，说明思考质量而非数量是关键</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>438.0</td><td class='val'>455.5</td><td class="neutral">+4.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 单次思考深度基本持平，思考增长主要来自频次而非深度</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 两侧均为零，无退化</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>4</td><td class='val'>0</td><td class="better">-100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复问题消除，内容连贯性改善</td></tr>
+</table>
+</div></div><div class="card"><h2>子Agent #3</h2><p class="meta">Baseline: Risk Assessment subagent | Upgraded: Legal recommendations agent</p><div class="sub-summary"><p>输入Token翻倍但输出略减，工具调用从2次增至12次且引入Grep作为主要手段，步骤数增长217%，整体呈现&quot;搜索更广但产出不增&quot;的低效模式。</p></div><div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>78936</td><td class='val'>171659</td><td class="worse">+117.5%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 输入Token翻倍，结合工具调用大量增加（Grep占8次），表明模型倾向于广泛搜索而非精准定位，信息效率下降</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>4917</td><td class='val'>4319</td><td class="better">-12.2%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 输出略减，在输入翻倍背景下产出未增，投入产出比恶化</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>158.6</td><td class='val'>127.9</td><td class="better">-19.4%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 时长缩短，速度优势对冲了任务复杂度增加</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>31.01</td><td class='val'>33.78</td><td class="better">+8.9%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 速度略有提升，幅度不大</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>6</td><td class='val'>19</td><td class="worse">+216.7%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 步骤数增长超3倍，与子Agent #2类似存在过度搜索倾向，但程度较轻</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>2</td><td class='val'>12</td><td class="worse">+500.0%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 调用次数增长5倍，其中Grep占8次，搜索策略从Glob（2次）转向Grep为主，精准度可能提升但调用效率下降</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>0</td><td class='val'>1</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 首次出现失败，虽绝对值低但方向性退化</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0.0</td><td class='val'>0.0833</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 8.33%失败率，在子Agent中处于中等水平</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td> </td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>3</td><td class='val'>6</td><td class="better">+100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考频次翻倍，与步骤增长一致</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>1113</td><td class='val'>2361</td><td class="better">+112.1%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考总量翻倍，与频次增长匹配</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>371.0</td><td class='val'>393.5</td><td class="better">+6.1%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 单次思考深度基本不变</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>0</td><td class='val'>1</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 从零到1，虽绝对值极低但方向为退化，需关注是否在更复杂场景下扩大</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>4</td><td class='val'>2</td><td class="better">-50.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复减少，内容质量改善</td></tr>
+</table>
+</div></div><div class="card"><h2>子Agent #4</h2><p class="meta">Baseline: Compliance Check subagent | Upgraded: Legal terms and obligations agent</p><div class="sub-summary"><p>输入Token大幅下降84.4%，内容质量显著改善（模糊词汇39→0，重复句子9→2），效率大幅提升，但首次出现工具调用失败且思考深度变化方向与主Agent相反（加深而非变浅），整体为正向改进。</p></div><div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>1911343</td><td class='val'>298344</td><td class="better">-84.4%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 输入Token下降84%，是本次升级中资源节约最显著的指标。Baseline存在191万Token的极高消耗，Upgraded回归合理水平，更可能是Baseline异常而非Upgraded优化</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>6789</td><td class='val'>4849</td><td class="better">-28.6%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 输出同步减少，与输入下降一致</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>364.1</td><td class='val'>99.2</td><td class="better">-72.8%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 时长大幅缩短，效率提升显著</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>18.65</td><td class='val'>48.88</td><td class="better">+162.1%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 速度提升2.6倍，与整体趋势一致</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>40</td><td class='val'>29</td><td class="better">-27.5%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 步骤减少，任务执行更精简</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>28</td><td class='val'>16</td><td class="better">-42.9%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 调用次数大幅减少，从过度搜索回归合理水平</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>0</td><td class='val'>1</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 首次出现失败，是唯一的负面信号</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0.0</td><td class='val'>0.0625</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 6.25%失败率处于可接受范围，但在零失败Baseline基础上属退化</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td> </td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>7</td><td class='val'>8</td><td class="better">+14.3%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考频次略增，变化不大</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>1211</td><td class='val'>2740</td><td class="better">+126.3%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 思考总量翻倍以上，推理深度增强</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>173.0</td><td class='val'>342.5</td><td class="better">+98.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 单次思考深度接近翻倍，与主Agent下降趋势相反，是该子Agent的亮点，可能解释了内容质量的显著改善</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>39</td><td class='val'>0</td><td class="better">-100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 模糊词汇从39降至0，是本次所有指标中改善幅度最大的，Baseline的39次命中本身即为异常高值</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>9</td><td class='val'>2</td><td class="better">-77.8%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复大幅减少，内容质量全面改善</td></tr>
+</table>
+</div></div><div class="card"><h2>子Agent #5</h2><p class="meta">Baseline: Recommendations subagent | Upgraded: Legal compliance check agent</p><div class="sub-summary"><p>输入Token增长388%，步骤数从6增至29，Think总字符暴增1187%，工具调用从3次增至12次且首次出现失败，呈现与子Agent #2类似的过度搜索倾向，但内容质量改善部分弥补了效率退化。</p></div><div class="card">
+<h3>&#9889; 资源消耗</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>输入Token总量</td><td class='val'>87021</td><td class='val'>425072</td><td class="worse">+388.5%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 输入Token增长近4倍，与子Agent #2同属异常膨胀，成本风险显著。在批量场景下，此类膨胀将被放大</td></tr><tr><td class='metric-name'>输出Token总量</td><td class='val'>6636</td><td class='val'>5048</td><td class="better">-23.9%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 输出略减，与输入暴增形成鲜明对比，投入产出比恶化</td></tr><tr><td class='metric-name'>会话时长(秒)</td><td class='val'>226.3</td><td class='val'>110.3</td><td class="better">-51.3%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 时长减半，速度提升对冲了任务复杂度</td></tr><tr><td class='metric-name'>每秒输出Token数</td><td class='val'>29.33</td><td class='val'>45.76</td><td class="better">+56.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 速度提升56%，与整体趋势一致</td></tr><tr><td class='metric-name'>执行总步骤数</td><td class='val'>6</td><td class='val'>29</td><td class="worse">+383.3%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 步骤数增长近4倍，与子Agent #2的暴增模式一致，表明该模型在子Agent中普遍存在过度搜索倾向</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128295; 工具调用</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>工具调用次数</td><td class='val'>3</td><td class='val'>12</td><td class="worse">+300.0%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 调用次数增长3倍，从Glob+Read的简单模式扩展为Glob+Read+Grep的多工具搜索</td></tr><tr><td class='metric-name'>调用失败次数</td><td class='val'>0</td><td class='val'>1</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 首次出现失败，所有子Agent均从零失败转为有失败，属系统性退化</td></tr><tr><td class='metric-name'>失败占比</td><td class='val'>0.0</td><td class='val'>0.0833</td><td class="worse">+∞</td><td><span class="risk-badge" style="background:#f39c12">中</span> 8.33%失败率，与子Agent #3相同</td></tr><tr><td class='metric-name'>子Agent调用数</td><td class='val'>0</td><td class='val'>0</td><td class="neutral">0%</td><td> </td></tr>
+</table>
+</div><div class="card">
+<h3>&#129504; 深度思考</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>Think次数</td><td class='val'>2</td><td class='val'>10</td><td class="better">+400.0%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 思考频次增长4倍，与步骤暴增一致</td></tr><tr><td class='metric-name'>Think总字符数</td><td class='val'>458</td><td class='val'>5893</td><td class="better">+1186.7%</td><td><span class="risk-badge" style="background:#e74c3c">高</span> 思考总量暴增近12倍，是该子Agent最突出的变化。大量思考未转化为更可靠的执行（仍有失败），存在&quot;过度思考但低效执行&quot;的风险</td></tr><tr><td class='metric-name'>Think平均字符数</td><td class='val'>229.0</td><td class='val'>589.3</td><td class="better">+157.3%</td><td><span class="risk-badge" style="background:#f39c12">中</span> 单次思考深度增长157%，但结合失败率上升，说明思考深度增加并未带来执行可靠性提升</td></tr>
+</table>
+</div><div class="card">
+<h3>&#128221; 内容质量</h3>
+<table>
+<tr><th>指标</th><th>Baseline</th><th>Upgraded</th><th>变化幅度</th><th>AI分析</th></tr>
+<tr><td class='metric-name'>模糊词汇命中次数</td><td class='val'>1</td><td class='val'>0</td><td class="better">-100.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 模糊词汇消除，正向改进</td></tr><tr><td class='metric-name'>重复3次以上句子数</td><td class='val'>5</td><td class='val'>1</td><td class="better">-80.0%</td><td><span class="risk-badge" style="background:#27ae60">低</span> 重复大幅减少，内容质量改善</td></tr>
+</table>
+</div></div>
+
+<div class="card">
+<h2>处理建议</h2>
+<ul class="suggestions"><li>建议1：针对主Agent工具调用失败率从5.88%飙升至18.18%的问题，需排查MiniMax2.7的工具调用格式生成和参数构造是否存在系统性偏差，建议抽取失败样本进行根因分析，确认是参数格式错误、幻觉调用还是上下文理解偏差。</li><li>建议2：子Agent #2输入Token暴增2498%和子Agent #5输入Token增长388%属于极端异常，需在Prompt层面对子Agent的上下文窗口和搜索深度施加硬约束（如最大Read文件数、Grep结果截断），防止成本失控。</li><li>建议3：所有5个子Agent均从零错误率转为有错误状态，这一系统性退化模式需在回归测试中增加子Agent层面的失败率阈值门控（建议不超过5%），作为上线前的阻断条件。</li><li>建议4：主Agent的Think平均字符数下降35.7%与子Agent的Think深度增加形成反差，建议对不同Agent层级设置差异化的推理深度策略——主Agent决策节点需保持充分思考，子Agent执行节点可适度精简。</li><li>建议5：在正式上线前，需补充更多任务类型的对比测试（当前仅单次会话数据），特别关注长链路多步推理、跨文件重构等高复杂度场景下，子Agent的Token膨胀和失败率是否进一步恶化。</li></ul>
+</div>
+
+</body>
+</html>

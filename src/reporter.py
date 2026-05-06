@@ -229,6 +229,7 @@ def generate_report(
         )
 
     # Sub-agent sections
+    subagent_risks = llm_result.get("subagent_risks", []) if llm_result else []
     sub_sections = []
     max_subs = max(len(baseline_sub_metrics), len(upgraded_sub_metrics))
     for i in range(max_subs):
@@ -240,6 +241,11 @@ def generate_report(
         b_desc = b_meta.get("description", f"子Agent #{i+1}")
         u_desc = u_meta.get("description", f"子Agent #{i+1}")
 
+        # Get per-sub-agent indicator risks from LLM analysis
+        sub_risk_info = subagent_risks[i] if i < len(subagent_risks) else {}
+        sub_indicator_risks = sub_risk_info.get("indicator_risks", {})
+        sub_summary = sub_risk_info.get("summary", "")
+
         tables = []
         for cat, cfg in _METRIC_CONFIG.items():
             b_cat = b_sub.get(cat, {})
@@ -248,11 +254,18 @@ def generate_report(
                 _metric_table(
                     cfg["title"], cfg["icon"], b_cat, u_cat,
                     cfg["labels"], cfg["higher_is_worse"],
+                    indicator_risks=sub_indicator_risks,
                 )
             )
+
+        summary_block = ""
+        if sub_summary:
+            summary_block = f'<div class="sub-summary">{_markdown_to_html(sub_summary)}</div>'
+
         sub_sections.append(
             f'<div class="card"><h2>子Agent #{i+1}</h2>'
             f'<p class="meta">Baseline: {html.escape(b_desc)} | Upgraded: {html.escape(u_desc)}</p>'
+            f'{summary_block}'
             f'{"".join(tables)}</div>'
         )
 
@@ -280,10 +293,11 @@ def generate_report(
                     if summary_part.startswith(prefix):
                         summary_part = summary_part[len(prefix):]
                         break
+                # Truncate at next ## heading to avoid including tables
+                next_heading = summary_part.find("\n## ")
+                if next_heading != -1:
+                    summary_part = summary_part[:next_heading]
                 overall_summary = summary_part.strip()
-
-        # Render full markdown analysis
-        analysis_html = _markdown_to_html(analysis_md) if analysis_md else ""
 
         # Extract suggestions from the markdown
         suggestion_items = ""
@@ -296,29 +310,41 @@ def generate_report(
         if action:
             action_colors = {"建议上线": "#27ae60", "建议回滚": "#e74c3c", "需要更多测试": "#f39c12"}
             action_color = action_colors.get(action, "#3498db")
-            action_html = f"""<div class="action-badge">
-<span style="background:{action_color};color:white;padding:12px 32px;border-radius:8px;font-size:20px;font-weight:bold;display:inline-block;">{html.escape(action)}</span>
-</div>"""
+            action_html = f'<span class="action-badge" style="background:{action_color}">{html.escape(action)}</span>'
 
         # Summary section (placed at top of report)
         summary_html = f"""<div class="summary-card">
 <div class="summary-header">
 <h2>分析总结</h2>
 <div class="risk-overview">
-<span class="risk-label">整体风险等级</span> {_risk_badge(risk)}
+<span class="risk-label">整体风险</span> {_risk_badge(risk)}
+{action_html}
 </div>
 </div>
 {f'<div class="summary-text">{_markdown_to_html(overall_summary)}</div>' if overall_summary else ''}
-{action_html}
 </div>"""
 
-        # Detailed analysis section
-        llm_html = f"""<div class="card analysis-card">
-<h2>详细分析报告</h2>
-{analysis_html}
+        # Suggestions section (only the 处理建议 bullets, not the full duplicated analysis)
+        suggestions_html = ""
+        if suggestion_items:
+            suggestions_html = f"""<div class="card">
+<h2>处理建议</h2>
+<ul class="suggestions">{suggestion_items}</ul>
 </div>"""
+
+        llm_html = suggestions_html
     else:
-        llm_html = '<div class="card"><h2>退化风险分析</h2><p class="error">LLM判断调用失败，请检查claude命令是否可用。</p></div>'
+        llm_html = """<div class="card">
+<h2>退化风险分析</h2>
+<p class="error">LLM判断调用失败，报告不含AI分析。</p>
+<p>可能原因及解决方案：</p>
+<ul class="suggestions">
+<li>claude命令未安装或不在PATH中 — 安装Claude Code CLI后重试</li>
+<li>API额度不足或网络超时 — 检查网络连接和账户余额</li>
+<li>已有缓存分析 — 使用 <code>--skip-llm</code> 可加载上次分析结果</li>
+<li>手动生成 — 将提示词保存为文件后运行 <code>claude -p &lt; prompt.md</code>，输出保存为 analysis.md</li>
+</ul>
+</div>"""
 
     # Assemble full HTML
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -358,10 +384,11 @@ tr:hover {{ background: #f8f9fa; }}
 .summary-text {{ background: white; border-radius: 8px; padding: 16px; margin: 12px 0; line-height: 1.8; }}
 .summary-text p {{ margin: 6px 0; }}
 .summary-text h2, .summary-text h3, .summary-text h4 {{ margin-top: 8px; }}
-.action-badge {{ text-align: center; margin: 16px 0; }}
+.action-badge {{ display: inline-block; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 6px; }}
 .analysis-card {{ border-left: 4px solid var(--primary); }}
 .analysis-card table {{ margin: 12px 0; }}
 .meta {{ color: var(--text-secondary); font-size: 13px; margin-bottom: 12px; }}
+.sub-summary {{ background: #f0f4ff; border-radius: 8px; padding: 12px 16px; margin: 8px 0 12px; line-height: 1.7; font-size: 14px; }}
 .suggestions {{ padding-left: 20px; }}
 .suggestions li {{ margin: 6px 0; line-height: 1.6; }}
 .error {{ color: var(--danger); font-style: italic; }}

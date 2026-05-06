@@ -19,12 +19,13 @@ def main():
     parser = argparse.ArgumentParser(description="Agent运行日志质量检测器")
     parser.add_argument("--baseline", required=True, help="Baseline日志目录路径")
     parser.add_argument("--upgraded", required=True, help="Upgraded日志目录路径")
-    parser.add_argument("--output", default="report.html", help="输出HTML报告路径")
+    parser.add_argument("--output", default="output/report.html", help="输出HTML报告路径")
     parser.add_argument("--skip-llm", action="store_true", help="跳过LLM判断步骤")
     args = parser.parse_args()
 
-    # Output paths
-    output_dir = os.path.dirname(os.path.abspath(args.output)) or "."
+    # Ensure output directory exists
+    output_dir = os.path.dirname(os.path.abspath(args.output))
+    os.makedirs(output_dir, exist_ok=True)
 
     # Parse logs
     print(f"[1/4] 解析Baseline日志: {args.baseline}")
@@ -74,9 +75,20 @@ def main():
             print(f"  整体风险等级: {llm_result.get('overall_risk', '未知')}")
             print(f"  分析报告: {llm_result.get('analysis_md_path', '')}")
         else:
-            print("  LLM判断失败")
+            print("  LLM判断失败，尝试加载缓存分析...")
+            from llm_judge import load_analysis
+            llm_result = load_analysis(output_dir)
+            if llm_result:
+                print(f"  已加载缓存分析: {llm_result.get('analysis_md_path', '')}")
+            else:
+                print("  无缓存分析可用，报告将不含AI分析")
     else:
         print("[3/4] 跳过LLM判断 (--skip-llm)")
+        # Try loading cached analysis
+        from llm_judge import load_analysis
+        llm_result = load_analysis(output_dir)
+        if llm_result:
+            print("  已加载缓存分析")
 
     # Generate report
     print(f"[4/4] 生成HTML报告: {args.output}")
