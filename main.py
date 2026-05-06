@@ -5,8 +5,8 @@ import json
 import sys
 import os
 
-# Ensure project root is on path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Ensure src directory is on path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 
 from parser import parse_log_dir
 from pipeline import MetricPipeline
@@ -22,6 +22,9 @@ def main():
     parser.add_argument("--output", default="report.html", help="输出HTML报告路径")
     parser.add_argument("--skip-llm", action="store_true", help="跳过LLM判断步骤")
     args = parser.parse_args()
+
+    # Output paths
+    output_dir = os.path.dirname(os.path.abspath(args.output)) or "."
 
     # Parse logs
     print(f"[1/4] 解析Baseline日志: {args.baseline}")
@@ -65,9 +68,11 @@ def main():
             },
             baseline_log_path=os.path.abspath(args.baseline),
             upgraded_log_path=os.path.abspath(args.upgraded),
+            output_dir=output_dir,
         )
         if llm_result:
             print(f"  整体风险等级: {llm_result.get('overall_risk', '未知')}")
+            print(f"  分析报告: {llm_result.get('analysis_md_path', '')}")
         else:
             print("  LLM判断失败")
     else:
